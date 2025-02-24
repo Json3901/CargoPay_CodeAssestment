@@ -3,8 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CargoPay.Infrastructure.Persistence;
 
-public class DatabaseContext(DbContextOptions<DatabaseContext> options) : DbContext(options)
+public class DatabaseContext : DbContext
 {
+    public DatabaseContext(DbContextOptions<DatabaseContext> options) : base(options)
+    {
+    }
+
     public DbSet<Card> Cards { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<PaymentFee> PaymentFees { get; set; }
@@ -14,6 +18,5 @@ public class DatabaseContext(DbContextOptions<DatabaseContext> options) : DbCont
         modelBuilder.Entity<Card>()
             .HasIndex(c => c.CardNumber)
             .IsUnique();
-
     }
 }
