@@ -22,13 +22,6 @@ public class DatabaseInitializer
 
     private async Task SeedDataAsync()
     {
-        var anyChange = false;
-        if (!await _context.PaymentFees.AnyAsync())
-        {
-            _context.PaymentFees.Add(new PaymentFee { CurrentFee = 1 });
-            anyChange = true;
-        }
-
         if (!await _context.Users.AnyAsync())
         {
             using var sha256 = SHA256.Create();
@@ -41,11 +34,6 @@ public class DatabaseInitializer
                 PasswordHash = Convert.ToBase64String(hash),
                 Role = Domain.Enums.Role.Admin
             });
-            anyChange = true;
-        }
-
-        if (anyChange)
-        {
             await _context.SaveChangesAsync();
         }
     }

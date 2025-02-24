@@ -44,10 +44,10 @@ namespace CargoPay.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("CurrentFee")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<decimal>("CurrentFee")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
