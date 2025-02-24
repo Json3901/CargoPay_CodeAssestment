@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using CargoPay.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,18 +13,39 @@ public class DatabaseInitializer
     {
         _context = context;
     }
-    
+
     public async Task InitializeAsync()
     {
         await _context.Database.MigrateAsync();
         await SeedDataAsync();
     }
-    
+
     private async Task SeedDataAsync()
     {
+        var anyChange = false;
         if (!await _context.PaymentFees.AnyAsync())
         {
             _context.PaymentFees.Add(new PaymentFee { CurrentFee = 1 });
+            anyChange = true;
+        }
+
+        if (!await _context.Users.AnyAsync())
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes("12345");
+            var hash = sha256.ComputeHash(bytes);
+
+            _context.Users.Add(new User
+            {
+                Username = "Admin",
+                PasswordHash = Convert.ToBase64String(hash),
+                Role = Domain.Enums.Role.Admin
+            });
+            anyChange = true;
+        }
+
+        if (anyChange)
+        {
             await _context.SaveChangesAsync();
         }
     }
