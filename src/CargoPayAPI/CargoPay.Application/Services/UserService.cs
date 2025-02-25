@@ -7,11 +7,14 @@ using CargoPay.Application.Interfaces.Infrastructure.Persistence.Repositories;
 using CargoPay.Domain.Entities;
 using CargoPay.Domain.Enums;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Validations.Rules;
+using static System.Double;
 
 namespace CargoPay.Application.Services;
 
-public class UserService(IHttpContextAccessor httpContextAccessor, IUnitOfWork unitOfWork)
+public class UserService(IHttpContextAccessor httpContextAccessor, IUnitOfWork unitOfWork, IConfiguration configuration)
     : IUserService
 {
     public async Task<User?> Authenticated()
@@ -89,17 +92,18 @@ public class UserService(IHttpContextAccessor httpContextAccessor, IUnitOfWork u
             new(ClaimTypes.NameIdentifier, username)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            "p2l+HnBQzJ6RQKHcJv3cVJTR1qOpe45i3Qf1tD+xE6XzYp2W1X5PrRjNw3Z5VgPvO93IvP7RHF2HZ/wXlg5HtQ=="));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]));;
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+        TryParse(configuration["JwtSettings:TokenLifeTime"], out var expirationTime);
 
         var tokenDescription = new SecurityTokenDescriptor()
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddDays(1),
+            Expires = DateTime.UtcNow.AddMinutes(expirationTime),
             SigningCredentials = credentials,
-            Audience = "C4rg0P4y",
-            Issuer = "C4rg0P4y"
+            Audience = configuration["JwtSettings:Audience"],
+            Issuer = configuration["JwtSettings:Issuer"]
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();

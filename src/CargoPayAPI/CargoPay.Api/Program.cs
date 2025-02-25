@@ -4,16 +4,15 @@ using CargoPay.Infrastructure.Persistence.Initialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpContextAccessor();
+var configuration = builder.Configuration;
 
-// Add services to the container.
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddApplication(configuration);
+builder.Services.AddInfrastructure(configuration);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

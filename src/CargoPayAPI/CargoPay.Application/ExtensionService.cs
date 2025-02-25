@@ -2,19 +2,18 @@ using System.Text;
 using CargoPay.Application.Interfaces;
 using CargoPay.Application.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json;
 
 namespace CargoPay.Application;
 
 public static class ExtensionService
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services,IConfiguration configuration)
     {
-        services = services.AddJwtAuthenticacion();
+        services = services.AddJwtAuthenticacion(configuration);
         services = services.AddSwagger();
         
         services.AddTransient<IUserService, UserService>();
@@ -62,7 +61,7 @@ public static class ExtensionService
         return services;
     }
 
-    private static IServiceCollection AddJwtAuthenticacion(this IServiceCollection services)
+    private static IServiceCollection AddJwtAuthenticacion(this IServiceCollection services,IConfiguration configuration)
     {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -73,9 +72,9 @@ public static class ExtensionService
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = "C4rg0P4y",
-                    ValidAudience = "C4rg0P4y",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("p2l+HnBQzJ6RQKHcJv3cVJTR1qOpe45i3Qf1tD+xE6XzYp2W1X5PrRjNw3Z5VgPvO93IvP7RHF2HZ/wXlg5HtQ=="))
+                    ValidIssuer = configuration["JwtSettings:Issuer"],
+                    ValidAudience = configuration["JwtSettings:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JwtSettings:SecretKey"]))
                 };
             });
 
