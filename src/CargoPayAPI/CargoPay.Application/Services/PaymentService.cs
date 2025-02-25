@@ -1,40 +1,62 @@
+using CargoPay.Application.Dtos.Transactions;
 using CargoPay.Application.Interfaces;
 using CargoPay.Application.Interfaces.Infrastructure.Persistence.Repositories;
 using CargoPay.Domain.Entities;
+using CargoPay.Domain.Enums;
 
 namespace CargoPay.Application.Services;
 
-public class PaymentService(IUnitOfWork unitOfWork, ICardService cardService)
+public class PaymentService(IUnitOfWork unitOfWork, ICardService cardService) : IPaymentService
 {
-    public async Task ProcessPayment(string cardNumber, decimal amount)
+    public async Task<TransactionResponse> ProcessPayment(TransactionRequest transactionRequest)
     {
-        var card = await cardService.GetCardByNumberAsync(cardNumber);
-        if (card == null)
-            throw new Exception("Card not found");
+        var card = await cardService.GetCardByNumberAsync(transactionRequest.CardNumber);
 
-        var fee = await unitOfWork.PaymentFees.GetLastAsync();
-        var feeAmount = amount * fee.CurrentFee;
-        var totalAmount = amount + feeAmount;
+        var fee = (await unitOfWork.PaymentFees.GetAllAsync()).OrderBy(x => x.CreatedAt).LastOrDefault();
+        var feeAmount = transactionRequest.Amount * fee.CurrentFee;
+        var totalAmount = Math.Round(transactionRequest.Amount + feeAmount,2);
+
+        var transaction = new Transaction(
+            (await unitOfWork.Cards.FindAsync(x => x.CardNumber == transactionRequest.CardNumber)).FirstOrDefault().Id,
+            transactionRequest.Amount, feeAmount);
+
+        await unitOfWork.Transactions.AddAsync(transaction);
+        await unitOfWork.SaveChangesAsync();
 
         if (card.Balance < totalAmount)
-            throw new Exception("Card has insufficient funds");
-
-        card.Balance -= totalAmount;
-        var updatedBalance = await cardService.UpdateBalanceAsync(cardNumber, card.Balance);
-
-        if (!updatedBalance)
         {
-            throw new Exception("Declined Transaction. Failed to update card balance");
+            transaction.Status = TransactionStatus.Declined;
+            unitOfWork.Transactions.Update(transaction);
+            await unitOfWork.SaveChangesAsync();
+            throw new Exception("Declined Transaction.Insufficient funds.");
         }
 
-        var transaction = new Transaction
+        card.Balance -= totalAmount;
+        try
         {
-            CardId = card.Id,
-            Amount = amount,
-            Fee = feeAmount
-        };
+            await cardService.UpdateBalanceAsync(card.CardNumber, card.Balance);
+        }
+        catch (Exception e)
+        {
+            transaction.Status = TransactionStatus.Declined;
+            unitOfWork.Transactions.Update(transaction);
+            await unitOfWork.SaveChangesAsync();
+            throw new Exception("Unauthorized. Declined Transaction. Balance was not modified.");
+        }
 
+        transaction.Status = TransactionStatus.Approved;
         unitOfWork.Transactions.Update(transaction);
         await unitOfWork.SaveChangesAsync();
+
+        return new TransactionResponse
+        {
+            TransactionId = transaction.Id.ToString(),
+            CardNumber = card.CardNumber,
+            Username = card.Username,
+            Amount = transactionRequest.Amount,
+            Fee = feeAmount,
+            CardBalance = card.Balance,
+            Status = transaction.Status.ToString()
+        };
     }
 }

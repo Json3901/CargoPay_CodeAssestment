@@ -27,5 +27,11 @@ public class DatabaseContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
             .HasConversion<string>();
+        
+        modelBuilder.Entity<Card>()
+            .HasOne<User>()
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade); 
     }
 }

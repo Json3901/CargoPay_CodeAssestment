@@ -11,7 +11,7 @@ public class PaymentFeeService(IServiceScopeFactory scopeFactory) : IHostedServi
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _timer = new Timer(UpdateFee, null, TimeSpan.Zero, TimeSpan.FromHours(1));
+        _timer = new Timer(UpdateFee, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
         return Task.CompletedTask;
     }
 
@@ -21,14 +21,21 @@ public class PaymentFeeService(IServiceScopeFactory scopeFactory) : IHostedServi
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var random = new Random();
-        var factor = 0.8m + (decimal)random.NextDouble() * 1.2m;
+        var factor = Math.Round((decimal)(random.NextDouble() * 2), 2);
 
-        var lastFee = (await unitOfWork.PaymentFees.GetAllAsync()).LastOrDefault();
+        if (factor < 0.01m)
+        {
+            factor = 0.01m;
+        }
+
+        var lastFee = (await unitOfWork.PaymentFees.GetAllAsync())
+            .ToList().LastOrDefault();
         var newFee = lastFee?.CurrentFee * factor ?? 1.0m;
 
-        var paymentFee = new PaymentFee { CurrentFee = newFee};
+        var paymentFee = new PaymentFee { CurrentFee = newFee };
         await unitOfWork.PaymentFees.AddAsync(paymentFee);
         await unitOfWork.SaveChangesAsync();
+        Console.WriteLine(paymentFee.CurrentFee);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

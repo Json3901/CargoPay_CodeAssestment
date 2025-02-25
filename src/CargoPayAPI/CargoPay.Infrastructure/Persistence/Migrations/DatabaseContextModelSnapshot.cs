@@ -30,10 +30,15 @@ namespace CargoPay.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CardNumber")
                         .IsUnique();
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Cards");
                 });
@@ -73,6 +78,9 @@ namespace CargoPay.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Fee")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CardId");
@@ -104,6 +112,15 @@ namespace CargoPay.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("CargoPay.Domain.Entities.Card", b =>
+                {
+                    b.HasOne("CargoPay.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CargoPay.Domain.Entities.Transaction", b =>
